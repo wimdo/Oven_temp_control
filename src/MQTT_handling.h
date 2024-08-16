@@ -85,8 +85,19 @@ bool connectMQTT()
 void publishWithMQTT()
 { 
   currentTime = millis();
-  if ((currentTime - previousTimeMQTT) > (myServer.intervalMQTT * 1000))
+  //if ((currentTime - previousTimeMQTT) > (myServer.intervalMQTT * 1000))
+  if ((currentTime - previousTimeMQTT) > (15 * 1000))
   {
+    unsigned long seconds = currentTime / 1000;
+    unsigned long minutes = seconds / 60;
+    unsigned long hours = minutes / 60;
+    unsigned long days = hours / 24;
+    //currentTime %= 1000;
+    seconds %= 60;
+    minutes %= 60;
+    hours %= 24;
+    char timeOn[64];
+    sprintf (timeOn,"%d:%d:%d",hours,minutes,seconds);
     previousTimeMQTT = currentTime;
     String statusString = "";
     myPayloadString ="";
@@ -95,6 +106,7 @@ void publishWithMQTT()
     {
       if (mySystem.connectToMQTT){
         if (connectMQTT()) {  
+            doc["Time"]=timeOn;
             if (sensor1.present){
               //doc["Sensor1"]["Id"]= sensor1.deviceAddress;
               doc["Sensor1"]["Temperature"]= round(sensor1.tempGemeten*10)/10;
