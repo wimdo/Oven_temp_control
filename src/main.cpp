@@ -212,8 +212,7 @@ void setup() {
   //showWIFIconnection();
   //showStatus();
   outlineMainscreen();
-  // put your setup code here, to run once:
-  //int result = myFunction(2, 3);
+  myServer.intervalMQTT = 15;
 }
 
 
