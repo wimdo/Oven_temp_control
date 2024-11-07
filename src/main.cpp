@@ -18,9 +18,10 @@
 //#include <Fonts/FreeSans9pt7b.h>
 #include "max6675.h"
 #include <SPI.h>
+#include <ESP32RotaryEncoder.h>
 
-//test github 
-//test2 github
+
+
 
 #define TFT_CS 5
 #define TFT_RST 23 // Or set to -1 and connect to Arduino RESET pin
@@ -51,10 +52,6 @@ const uint8_t wifi_NOK[] PROGMEM = {
 #define btnSHORT 1
 #define btnLONG 2
 
-#define rotarySwitch 17
-#define rotaryS1 21
-#define rotaryS2 22
-
 #define heating 2
 #define cooling 1
 #define idle 0
@@ -69,10 +66,14 @@ const uint8_t wifi_NOK[] PROGMEM = {
 #define dataPrefix "data"
 #define infoPrefix "info"
 
-int rotaryCounter= 0;
-int rotaryCurrentStateCLK;
-int rotaryPreviousStateCLK;
-String encdir ="";
+// Change these to the actual pin numbers that
+// you've connected your rotary encoder to
+const uint8_t DI_ENCODER_A   = 21;
+const uint8_t DI_ENCODER_B   = 22;
+const int8_t  DI_ENCODER_SW  = 17;
+
+RotaryEncoder rotaryEncoder( DI_ENCODER_A, DI_ENCODER_B, DI_ENCODER_SW);
+
 
 int thermoDO1 = 2;
 int thermoCS1 = 15;
@@ -182,23 +183,23 @@ void IRAM_ATTR pushButtonPressedRight()
   }
 }
 
+void knobCallback( long value )
+{
+	Serial.printf( "Value: %ld\n", value );
+}
+
+void buttonCallback( unsigned long duration )
+{
+	Serial.printf( "boop! button was down for %lu ms\n", duration );
+}
+
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Define pinmodes");
-  //pinMode(sensor1HeatPin, OUTPUT);
-  //digitalWrite(sensor1HeatPin, relayOff);
-  //pinMode(switchSensor1Settings, INPUT_PULLDOWN_16); //(enable it with INPUT_PULLDOWN).
-  //pinMode(switchSensor1Settings, INPUT); // pinMode(BTN_LEFT, INPUT_PULLUP);
-  //pinMode(btnPinSELECT, INPUT); // pinMode(BTN_LEFT, INPUT_PULLUP);
-  //attachInterrupt(btnPinSELECT, pushButtonPressed, FALLING);
-  //pinMode(0, INPUT_PULLUP);
-  pinMode(rotarySwitch,INPUT);
-  pinMode(rotaryS1,INPUT);
-  pinMode(rotaryS2,INPUT);
+  
 
   pinMode(35, INPUT);
-  //attachInterrupt(0, pushButtonPressedLeft, FALLING);
-  attachInterrupt(17, pushButtonPressedLeft, FALLING);
   attachInterrupt(35, pushButtonPressedRight, FALLING);
   loadDataFromFile(); 
   //selectSensor1Settings();
@@ -213,6 +214,25 @@ void setup() {
   //showStatus();
   outlineMainscreen();
   myServer.intervalMQTT = 15;
+  rotaryEncoder.setEncoderType( EncoderType::HAS_PULLUP );
+
+	// Range of values to be returned by the encoder: minimum is 1, maximum is 10
+	// The third argument specifies whether turning past the minimum/maximum will
+	// wrap around to the other side:
+	//  - true  = turn past 10, wrap to 1; turn past 1, wrap to 10
+	//  - false = turn past 10, stay on 10; turn past 1, stay on 1
+	rotaryEncoder.setBoundaries( 1, 10, true );
+
+	// The function specified here will be called every time the knob is turned
+	// and the current value will be passed to it
+	rotaryEncoder.onTurned( &knobCallback );
+
+	// The function specified here will be called every time the button is pushed and
+	// the duration (in milliseconds) that the button was down will be passed to it
+	rotaryEncoder.onPressed( &buttonCallback );
+
+	// This is where the inputs are configured and the interrupts get attached
+	rotaryEncoder.begin();
 }
 
 
@@ -239,6 +259,6 @@ client = server.available();
     sensor2.tempHistoryCounter++;
   }
   //buttonCheck();
-  rotaryCheck();
+  //rotaryCheck();
   ArduinoOTA.handle();
 }
