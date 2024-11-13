@@ -19,7 +19,7 @@
 #include "max6675.h"
 #include <SPI.h>
 #include <ESP32RotaryEncoder.h>
-
+#include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 
 
 
@@ -36,6 +36,10 @@
 #define GREY 0x8410
 Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
 
+TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
+//TFT_eSPI box = TFT_eSPI(); 
+TFT_eSprite box = TFT_eSprite(&tft);
+
 const uint8_t wifi_OK[] PROGMEM = {
     0xF0, 0x00, 0x08, 0x00, 0xE4, 0x00, 0x12, 0x00, 0xCA, 0x00, 0x2A, 0x00};
 const uint8_t wifi_NOK[] PROGMEM = {
@@ -51,6 +55,24 @@ const uint8_t wifi_NOK[] PROGMEM = {
 #define btnNONE 0
 #define btnSHORT 1
 #define btnLONG 2
+
+// GPIO and low level buttons
+#define btnTIMEOUT -1
+#define btnNONE 0
+#define btnESC 4
+#define btnRIGHT 36
+#define btnLEFT 34
+#define btnSELECT 39
+
+// program defined buttons
+#define buttonNone -1
+#define buttonLeft 1
+#define buttonCenter 2
+#define buttonRight 3
+#define buttonEscape 4
+
+
+
 
 #define heating 2
 #define cooling 1
@@ -126,12 +148,11 @@ struct controle sensor1_local;
 struct controle sensor1_remote;
 typedef struct
 {
-  int buttonPressed;
-  int buttonPin;
   unsigned long millisPressed;
-  boolean buttonReleased;
-  unsigned long millisReleased;
+  boolean buttonPressed = false;
   boolean sensor1SettingsSelect =false;
+  long rotaryValue;
+  boolean rotaryTurned = false;
 } buttonData;
 static buttonData button;
 
@@ -159,6 +180,8 @@ struct connection
 };
 struct connection mySystem;
 
+char *mainMenu_table[] = {"programma kiezen", "sprinkler kiezen", "relais kiezen", "programma wijzigen","test"};
+
 #include <display.h>
 #include <temperature.h>
 #include <file_handling.h>
@@ -167,40 +190,25 @@ struct connection mySystem;
 #include <server_pages.h>
 
 
-void IRAM_ATTR pushButtonPressedLeft()
-{
-  button.buttonPressed = btnLEFT;
-  button.millisPressed = millis();
-}
 
-void IRAM_ATTR pushButtonPressedRight()
-{
-  if (digitalRead(35) == 0){
-    if (button.buttonPressed != btnRIGHT){
-      button.buttonPressed = btnRIGHT;
-      button.millisPressed = millis();
-    }
-  }
-}
 
-void knobCallback( long value )
+void rotaryCallback( long value )
 {
-	Serial.printf( "Value: %ld\n", value );
+	//Serial.printf( "Value: %ld\n", value );
+  button.rotaryTurned = true;
+  button.rotaryValue = value;
 }
 
 void buttonCallback( unsigned long duration )
 {
-	Serial.printf( "boop! button was down for %lu ms\n", duration );
+	//Serial.printf( "boop! button was down for %lu ms\n", duration );
+  button.buttonPressed = true;
+  button.millisPressed = duration;
 }
 
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Define pinmodes");
-  
-
-  pinMode(35, INPUT);
-  attachInterrupt(35, pushButtonPressedRight, FALLING);
   loadDataFromFile(); 
   //selectSensor1Settings();
   setupDisplay();
@@ -214,6 +222,7 @@ void setup() {
   //showStatus();
   outlineMainscreen();
   myServer.intervalMQTT = 15;
+  //rotaryEncoder.setEncoderType( EncoderType::FLOATING );
   rotaryEncoder.setEncoderType( EncoderType::HAS_PULLUP );
 
 	// Range of values to be returned by the encoder: minimum is 1, maximum is 10
@@ -225,21 +234,21 @@ void setup() {
 
 	// The function specified here will be called every time the knob is turned
 	// and the current value will be passed to it
-	rotaryEncoder.onTurned( &knobCallback );
+	rotaryEncoder.onTurned( &rotaryCallback );
 
 	// The function specified here will be called every time the button is pushed and
 	// the duration (in milliseconds) that the button was down will be passed to it
 	rotaryEncoder.onPressed( &buttonCallback );
 
 	// This is where the inputs are configured and the interrupts get attached
-	rotaryEncoder.begin();
+	rotaryEncoder.begin(1);
 }
 
 
 
 
 void loop() {
-client = server.available();
+  client = server.available();
   if (client)
   {
     handleRequest();
@@ -258,7 +267,13 @@ client = server.available();
     sensor1.tempHistoryCounter++;
     sensor2.tempHistoryCounter++;
   }
-  //buttonCheck();
-  //rotaryCheck();
+  if (button.buttonPressed){
+    Serial.printf( "boop! button was down for %lu ms\n", button.millisPressed );
+    rotaryEncoder.disable();
+    int keuze =mainMenu();
+    //outlineMainscreen();
+    button.buttonPressed = false;
+    rotaryEncoder.enable();
+  }
   ArduinoOTA.handle();
 }
