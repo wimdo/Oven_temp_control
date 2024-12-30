@@ -105,7 +105,7 @@ void reWriteMyServerFile()
     mySystem.connectToWIFI= true;
     mySystem.connectToMQTT= true;
     mySystem.refreshRate= 10;  
-    strcpy(myServer.serverMQTT,"192.168.0.121");
+    strcpy(myServer.serverMQTT,"192.168.0.120");
     myServer.port=1883;
     strcpy(myServer.topic,"tempcontrole/temp_oven");
     myServer.intervalMQTT=30;
