@@ -223,7 +223,7 @@ void setup() {
   outlineMainscreen();
   myServer.intervalMQTT = 15;
   //rotaryEncoder.setEncoderType( EncoderType::FLOATING );
-  rotaryEncoder.setEncoderType( EncoderType::HAS_PULLUP );
+  rotaryEncoder.setEncoderType( EncoderType::HAS_PULLUP);
 
 	// Range of values to be returned by the encoder: minimum is 1, maximum is 10
 	// The third argument specifies whether turning past the minimum/maximum will
@@ -269,11 +269,21 @@ void loop() {
   }
   if (button.buttonPressed){
     Serial.printf( "boop! button was down for %lu ms\n", button.millisPressed );
-    rotaryEncoder.disable();
-    int keuze =mainMenu();
+    //rotaryEncoder.disable();
+    //int keuze =mainMenu();
     //outlineMainscreen();
+    testMenu();
     button.buttonPressed = false;
     rotaryEncoder.enable();
   }
+   if (button.rotaryTurned){
+    Serial.printf( "rotary was turned to %lu \n", button.rotaryValue );
+    //rotaryEncoder.disable();
+    //int keuze =mainMenu();
+    //outlineMainscreen();
+    testMenu();
+    button.rotaryTurned = false;
+    rotaryEncoder.enable();
+  } 
   ArduinoOTA.handle();
 }

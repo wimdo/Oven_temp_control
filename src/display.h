@@ -50,7 +50,7 @@ void buttonCheck(){
   */
 }
 
-int rotaryScan(){
+boolean rotaryScan(){
   rotaryEncoder.enable();
   long previousMillis = millis();
   button.buttonPressed=false;
@@ -61,11 +61,11 @@ int rotaryScan(){
     if ((millis() - previousMillis) > 10000)
     {
       rotaryEncoder.disable();
-      return btnTIMEOUT;
+      return false;
     }
     if (button.buttonPressed || button.rotaryTurned){
       rotaryEncoder.disable();
-      return 1;
+      return true;
     }
   }
 }
@@ -125,7 +125,28 @@ int menuDropbox(char *menuTable[], int rijen)
     return 0;
 }
 
+void testMenu(){
+  boolean endMenu =true;
+  Serial.println("testmenu");
+  rotaryEncoder.setBoundaries( 0, 10, true );
+  while (endMenu){
+    boolean checkInput=rotaryScan();
+    if (checkInput) {
+      if (button.buttonPressed){
+        Serial.printf( "boop! button was down for %lu ms\n", button.millisPressed );
+        button.buttonPressed = false;
+      }
+      if (button.rotaryTurned){
+        Serial.printf( "rotary turned to %lu \n", button.rotaryValue );
+        button.rotaryTurned = false;
+      } 
+    } else {
+      endMenu = false;
+    }
+  }
+  Serial.println("leave testmenu");
 
+}
 
 
 
