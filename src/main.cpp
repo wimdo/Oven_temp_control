@@ -13,8 +13,8 @@
 #include <WiFiManager.h>
 #include "OTA.h"
 #include <ArduinoJson.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
+//#include <Adafruit_GFX.h>
+//#include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 //#include <Fonts/FreeSans9pt7b.h>
 #include "max6675.h"
 #include <SPI.h>
@@ -22,7 +22,7 @@
 #include <TFT_eSPI.h> // Graphics and font library for ST7735 driver chip
 
 
-
+/*
 #define TFT_CS 5
 #define TFT_RST 23 // Or set to -1 and connect to Arduino RESET pin
 #define TFT_DC 16
@@ -35,10 +35,10 @@
 #define GREEN ST77XX_GREEN
 #define GREY 0x8410
 Adafruit_ST7789 display = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_MOSI, TFT_SCLK, TFT_RST);
-
-TFT_eSPI tft = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
+*/
+TFT_eSPI display = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
 //TFT_eSPI box = TFT_eSPI(); 
-TFT_eSprite box = TFT_eSprite(&tft);
+TFT_eSprite box = TFT_eSprite(&display);
 
 const uint8_t wifi_OK[] PROGMEM = {
     0xF0, 0x00, 0x08, 0x00, 0xE4, 0x00, 0x12, 0x00, 0xCA, 0x00, 0x2A, 0x00};
@@ -209,6 +209,7 @@ void buttonCallback( unsigned long duration )
 
 void setup() {
   Serial.begin(115200);
+  box.createSprite(150,100);
   loadDataFromFile(); 
   //selectSensor1Settings();
   setupDisplay();
@@ -270,18 +271,19 @@ void loop() {
   if (button.buttonPressed){
     Serial.printf( "boop! button was down for %lu ms\n", button.millisPressed );
     //rotaryEncoder.disable();
-    //int keuze =mainMenu();
-    //outlineMainscreen();
-    testMenu();
-    button.buttonPressed = false;
+    int keuze =mainMenu();
+    outlineMainscreen();
+    //testMenu();
+    //button.buttonPressed = false;
     rotaryEncoder.enable();
   }
    if (button.rotaryTurned){
     Serial.printf( "rotary was turned to %lu \n", button.rotaryValue );
     //rotaryEncoder.disable();
     //int keuze =mainMenu();
-    //outlineMainscreen();
-    testMenu();
+    
+    int keuze =mainMenu();
+    outlineMainscreen();
     button.rotaryTurned = false;
     rotaryEncoder.enable();
   } 

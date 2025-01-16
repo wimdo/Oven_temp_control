@@ -1,10 +1,11 @@
 void setupDisplay()
 {
-  display.init(135, 240); // Init ST7789 240x240
-  display.setRotation(1);
-  pinMode(TFT_BACKLIGHT, OUTPUT);
-  digitalWrite(TFT_BACKLIGHT, HIGH); // Backlight on
+  display.init(); // Init ST7789 240x240
+  display.setRotation(3);
+  //pinMode(TFT_BACKLIGHT, OUTPUT);
+  //digitalWrite(TFT_BACKLIGHT, HIGH); // Backlight on
   display.setTextSize(1);
+  
 }
 
 
@@ -21,23 +22,23 @@ void showStatus() {
 void updateGraph(int counter){
   sensor1.tempHistory[counter]= sensor1.tempGemeten;
   int pixelPosY = 99-round(sensor1.tempHistory[counter]/4);
-  display.drawPixel(counter,pixelPosY, BLUE);
+  display.drawPixel(counter,pixelPosY, TFT_BLUE);
   sensor2.tempHistory[counter]= sensor2.tempGemeten;
   pixelPosY = 99-round(sensor2.tempHistory[counter]/4);
-  display.drawPixel( counter,pixelPosY, GREEN);
+  display.drawPixel( counter,pixelPosY, TFT_GREEN);
 
 }
 
 void outlineMainscreen()
 {
-  display.fillScreen(ST77XX_BLACK);
-  display.setTextColor(WHITE, ST77XX_BLACK);
-  display.drawRect(0, 0, 240, 105, GREY);
-  display.drawFastHLine(0, 24, 240, GREY);
-  display.drawFastHLine(0, 24+25, 240, GREY);
-  display.drawFastHLine(0, 24+25+25, 240, GREY);
-  display.drawRect(0, 99, 240, 29, GREY);
-  display.drawFastHLine(0, 99-round(sensor1.setPointValue/4), 240, ST77XX_RED);
+  display.fillScreen(TFT_BLACK);
+  display.setTextColor(TFT_WHITE, TFT_BLACK);
+  display.drawRect(0, 0, 240, 105, TFT_LIGHTGREY);
+  display.drawFastHLine(0, 24, 240, TFT_LIGHTGREY);
+  display.drawFastHLine(0, 24+25, 240, TFT_LIGHTGREY);
+  display.drawFastHLine(0, 24+25+25, 240, TFT_LIGHTGREY);
+  display.drawRect(0, 99, 240, 29, TFT_LIGHTGREY);
+  display.drawFastHLine(0, 99-round(sensor1.setPointValue/4), 240, TFT_RED);
 }
 
 void buttonCheck(){
@@ -75,19 +76,19 @@ boolean rotaryScan(){
 int menuDropbox(char *menuTable[], int rijen)
 {
     
-    
+    display.fillScreen(TFT_RED);
     box.setColorDepth(8);
-    box.createSprite(150,100);
+    //box.createSprite(150,100);
     //box.fillRect(0,0,150,100, GREEN);
     int positie = 0;
     //box.fillRect(0, 12, 128, 80, BLACK); //(x, y, breedte = 6x karakter +6+10, hoogte aantal lijnen
     //box.drawRect(0, 12, 128, 80, WHITE);
     while (1)
     {
-      box.fillRect(0,0,150,100, WHITE);
-      box.fillRect(0, 12, 128, 80, BLACK); //(x, y, breedte = 6x karakter +6+10, hoogte aantal lijnen
-      box.drawRect(0, 12, 128, 80, WHITE);
-      box.setTextColor(WHITE);//DARKGREY
+      box.fillRect(0,0,150,100, TFT_WHITE);
+      box.fillRect(0, 12, 128, 80, TFT_BLACK); //(x, y, breedte = 6x karakter +6+10, hoogte aantal lijnen
+      box.drawRect(0, 12, 128, 80, TFT_WHITE);
+      box.setTextColor(TFT_WHITE);//DARKGREY
       
       for (int i = 0; i <= rijen-1; i++)
         {
@@ -115,6 +116,7 @@ int menuDropbox(char *menuTable[], int rijen)
           }
           if (button.rotaryTurned){
             positie = button.rotaryValue;
+            Serial.println(button.rotaryValue);
             button.rotaryTurned = false;
           }
         } else {
