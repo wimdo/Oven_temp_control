@@ -4,6 +4,7 @@ void setupDisplay()
   display.setRotation(3);
   //pinMode(TFT_BACKLIGHT, OUTPUT);
   //digitalWrite(TFT_BACKLIGHT, HIGH); // Backlight on
+  display.setFreeFont(TT1);  
   display.setTextSize(1);
   
 }
@@ -75,56 +76,47 @@ boolean rotaryScan(){
 
 int menuDropbox(char *menuTable[], int rijen)
 {
-    
-    display.fillScreen(TFT_RED);
-    box.setColorDepth(8);
-    //box.createSprite(150,100);
-    //box.fillRect(0,0,150,100, GREEN);
-    int positie = 0;
-    //box.fillRect(0, 12, 128, 80, BLACK); //(x, y, breedte = 6x karakter +6+10, hoogte aantal lijnen
-    //box.drawRect(0, 12, 128, 80, WHITE);
-    while (1)
-    {
-      box.fillRect(0,0,150,100, TFT_WHITE);
-      box.fillRect(0, 12, 128, 80, TFT_BLACK); //(x, y, breedte = 6x karakter +6+10, hoogte aantal lijnen
-      box.drawRect(0, 12, 128, 80, TFT_WHITE);
-      box.setTextColor(TFT_WHITE);//DARKGREY
-      
-      for (int i = 0; i <= rijen-1; i++)
-        {
-            box.setCursor(2, 16 + i * 8);
-            if (positie == i)
-            {
-                box.printf("> %s", menuTable[i]);
-            }
-            else
-            {
-                box.printf("  %s", menuTable[i]);
-            }
-        }
-        box.pushSprite(0,0);
-        //Serial.printf("%d %d %d %d\n", rijen, beginregel, eindregel, positie);
-        int keuze = 1;
-        keuze = rotaryScan();
-        if (keuze != btnTIMEOUT) {
-          if (button.buttonPressed){
-            button.buttonPressed=false;
-            Serial.println(button.rotaryValue);
-            box.deleteSprite();
-            return button.rotaryValue;
-
-          }
-          if (button.rotaryTurned){
-            positie = button.rotaryValue;
-            Serial.println(button.rotaryValue);
-            button.rotaryTurned = false;
-          }
+  TFT_eSprite box = TFT_eSprite(&display);
+  box.createSprite(200,20*rijen);
+  box.setColorDepth(8);
+  box.setFreeFont(FF17);   
+  int positie = 0;
+  while (1)
+  {    
+    for (int i = 0; i <= rijen-1; i++)
+      {
+        if (positie == i){
+          box.fillRect(0,i*20,240,20, TFT_LIGHTGREY);
+          box.setTextColor(TFT_DARKGREY);//DARKGREY
         } else {
-          box.deleteSprite();
-          return buttonNone;
+          box.fillRect(0,i*20,240,20, TFT_DARKGREY);
+          box.setTextColor(TFT_WHITE);//TFT_DARKGREY
         }
-    }
-    return 0;
+        box.setCursor(2, 14 + i * 20);
+        box.printf("%s", menuTable[i]);
+      }
+    
+      box.pushSprite(20,0);
+      int keuze = 1;
+      keuze = rotaryScan();
+      if (keuze != btnTIMEOUT) {
+        if (button.buttonPressed){
+          button.buttonPressed=false;
+          Serial.println(button.rotaryValue);
+          box.deleteSprite();
+          return button.rotaryValue;
+        }
+        if (button.rotaryTurned){
+          positie = button.rotaryValue;
+          Serial.println(button.rotaryValue);
+          button.rotaryTurned = false;
+        }
+      } else {
+        box.deleteSprite();
+        return buttonNone;
+      }
+  }
+  return 0;
 }
 
 void testMenu(){
