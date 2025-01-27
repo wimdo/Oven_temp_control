@@ -1,7 +1,22 @@
+
+void resetHeatingTimer()
+{
+  timeOn=dutycycle*periode;
+  timePeriode = periode*100;
+  Serial.print("TimeOn ");
+  Serial.println(timeOn);
+   Serial.print("Time periode ");
+  Serial.println(timePeriode);
+  timerCount = 0;
+  heatingPower =true;
+  digitalWrite(relaisPin,heatingPower);   
+}
+
+
 void checkTemperature() {
 
   currentTime = millis();
-  if ((currentTime - previousTimeTempRead) > (2000)){
+  if ((currentTime - previousTimeTempRead) > (300)){
     previousTimeTempRead= currentTime;
     
     sensor1.tempGemeten=(int)round(thermocouple1.readCelsius());
@@ -11,7 +26,7 @@ void checkTemperature() {
     Serial.print(sensor2.tempGemeten);
     Serial.print("   ");
     Serial.println(sensor1.setPointValue);
-    showStatus();
+    //showStatus();
     sensor1.present = true;
     sensor2.present = true;
     /*

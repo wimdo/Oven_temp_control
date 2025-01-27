@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#define VERSION "Version 23/10/23"
+#define VERSION "Version 27/01/25"
 #define nameprefix "HOME"
 #define moduletype "OVEN CONTROLLER"
 
@@ -21,7 +21,7 @@
 
 
 TFT_eSPI display = TFT_eSPI();  // Invoke library, pins defined in User_Setup.h
-
+TFT_eSprite mainscreen = TFT_eSprite(&display);
 
 const uint8_t wifi_OK[] PROGMEM = {
     0xF0, 0x00, 0x08, 0x00, 0xE4, 0x00, 0x12, 0x00, 0xCA, 0x00, 0x2A, 0x00};
@@ -29,33 +29,21 @@ const uint8_t wifi_NOK[] PROGMEM = {
     0xF0, 0x40, 0x08, 0x40, 0xE4, 0x40, 0x12, 0x40, 0xCA, 0x00, 0x2A, 0x40};
 
 
-#define btnLEFT 1
-#define btnRIGHT 2
-#define btnLEFTLONG 3
-#define btnRIGHTLONG 4
-#define btnSELECT 1
-#define btnTIMEOUT -1
-#define btnNONE 0
-#define btnSHORT 1
-#define btnLONG 2
+volatile float dutycycle =50;
+volatile float periode = 5;
+volatile boolean heatingPower=false;
+volatile boolean overrun=false;
+volatile unsigned long timeOn;
+volatile unsigned long timePeriode;
+volatile unsigned long timerCount;
 
-// GPIO and low level buttons
-#define btnTIMEOUT -1
-#define btnNONE 0
-#define btnESC 4
-#define btnRIGHT 36
-#define btnLEFT 34
-#define btnSELECT 39
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+hw_timer_t *heatingTimer = NULL;
 
-// program defined buttons
-#define buttonNone -1
-#define buttonLeft 1
-#define buttonCenter 2
-#define buttonRight 3
-#define buttonEscape 4
+#define relaisPin 33
+#define buttonNone -255
 
-
-
+int menuPositie;
 
 #define heating 2
 #define cooling 1
@@ -129,15 +117,20 @@ struct controle sensor1;
 struct controle sensor2; 
 struct controle sensor1_local;
 struct controle sensor1_remote;
+
 typedef struct
 {
   unsigned long millisPressed;
+  boolean longPress = false;
   boolean buttonPressed = false;
-  boolean sensor1SettingsSelect =false;
   long rotaryValue;
   boolean rotaryTurned = false;
+  boolean sensor1SettingsSelect =false;
 } buttonData;
 static buttonData button;
+
+char *mainMenu_table[] = {"test menu", "Sensor 2", "Menukeuze 3", "Menukeuze 4","Menukeuze 5"};
+char *jaNee_table[] = {"Ja", "Nee"};
 
 struct server
 {
@@ -163,68 +156,80 @@ struct connection
 };
 struct connection mySystem;
 
-char *mainMenu_table[] = {"programma kiezen", "sprinkler kiezen", "relais kiezen", "programma wijzigen","test"};
 
-#include <display.h>
+
 #include <temperature.h>
 #include <file_handling.h>
 #include <MQTT_handling.h>
 #include <HTTP_handling.h>
 #include <server_pages.h>
-
+#include <display.h>
 
 
 
 void rotaryCallback( long value )
 {
-	//Serial.printf( "Value: %ld\n", value );
   button.rotaryTurned = true;
   button.rotaryValue = value;
 }
 
 void buttonCallback( unsigned long duration )
 {
-	//Serial.printf( "boop! button was down for %lu ms\n", duration );
   button.buttonPressed = true;
-  button.millisPressed = duration;
+  //button.millisPressed = duration;
+  if (duration > 1000){
+    button.longPress = true;
+  } else {
+    button.longPress = false;
+  }
+  Serial.printf( "down for %lu ms %d\n", duration,button.longPress );
+}
+
+void IRAM_ATTR heatingPowercheck(){
+    timerCount++;
+
+    if ((timerCount == timeOn)&& (timerCount!=timePeriode)){
+      heatingPower = false;
+      overrun = true;
+      digitalWrite(relaisPin,heatingPower);
+    } else if (timerCount == timePeriode){
+      heatingPower = true;
+      overrun = true;
+      timerCount =0;
+      digitalWrite(relaisPin,heatingPower);
+    }
 }
 
 
 void setup() {
   Serial.begin(115200);
   loadDataFromFile(); 
-  //selectSensor1Settings();
   setupDisplay();
-  //checkForReset();
-  //WiFi.begin("xxx","xxx");
   WiFi.begin("57_home","wonderfulcurtain962");
   //myServer.connectToWIFI = false;
   setupHostName();
   setupWifiManager();
   //showWIFIconnection();
   //showStatus();
-  outlineMainscreen();
   myServer.intervalMQTT = 15;
-  //rotaryEncoder.setEncoderType( EncoderType::FLOATING );
+
+  pinMode(relaisPin, OUTPUT);
+  periode = 5;
+  dutycycle =50;
+  resetHeatingTimer();
+  heatingTimer = timerBegin(0, 80, true);
+  timerAttachInterrupt(heatingTimer, &heatingPowercheck, true);
+  timerAlarmWrite(heatingTimer, 10000, true); //100ms
+  timerAlarmEnable(heatingTimer);
+  timerStart(heatingTimer);
   rotaryEncoder.setEncoderType( EncoderType::HAS_PULLUP);
-
-	// Range of values to be returned by the encoder: minimum is 1, maximum is 10
-	// The third argument specifies whether turning past the minimum/maximum will
-	// wrap around to the other side:
-	//  - true  = turn past 10, wrap to 1; turn past 1, wrap to 10
-	//  - false = turn past 10, stay on 10; turn past 1, stay on 1
-	rotaryEncoder.setBoundaries( 1, 10, true );
-
-	// The function specified here will be called every time the knob is turned
-	// and the current value will be passed to it
+	rotaryEncoder.setBoundaries( 1, 3, true );
 	rotaryEncoder.onTurned( &rotaryCallback );
-
-	// The function specified here will be called every time the button is pushed and
-	// the duration (in milliseconds) that the button was down will be passed to it
 	rotaryEncoder.onPressed( &buttonCallback );
-
-	// This is where the inputs are configured and the interrupts get attached
 	rotaryEncoder.begin(1);
+  menuPositie = 0;
+  digitalWrite(relaisPin,1);
+  outlineMainscreen();
 }
 
 
@@ -236,7 +241,6 @@ void loop() {
   {
     handleRequest();
   }
-  checkTemperature();
   if (mySystem.connectToWIFI){
     if (mySystem.connectToMQTT){
       connectMQTT();
@@ -244,30 +248,26 @@ void loop() {
       publishWithMQTT();
     }
   }
+  /*
   if ((currentTime - previousTimeHistory) > (5000)){
     previousTimeHistory= currentTime;
-    updateGraph(sensor1.tempHistoryCounter);
+    //updateGraph(sensor1.tempHistoryCounter);
     sensor1.tempHistoryCounter++;
     sensor2.tempHistoryCounter++;
   }
+  */
+  if ( overrun ){
+    checkTemperature();
+    outlineMainscreen();
+    overrun =false;
+  }
   if (button.buttonPressed){
-    Serial.printf( "boop! button was down for %lu ms\n", button.millisPressed );
-    //rotaryEncoder.disable();
     int keuze =mainMenu();
     outlineMainscreen();
-    //testMenu();
-    //button.buttonPressed = false;
+    rotaryEncoder.setBoundaries( 1, 3, true );
+    rotaryEncoder.setEncoderValue(1);
+    button.buttonPressed = false;
     rotaryEncoder.enable();
   }
-   if (button.rotaryTurned){
-    Serial.printf( "rotary was turned to %lu \n", button.rotaryValue );
-    //rotaryEncoder.disable();
-    //int keuze =mainMenu();
-    
-    int keuze =mainMenu();
-    outlineMainscreen();
-    button.rotaryTurned = false;
-    rotaryEncoder.enable();
-  } 
   ArduinoOTA.handle();
 }
